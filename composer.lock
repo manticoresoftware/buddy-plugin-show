@@ -711,12 +711,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/manticoresoftware/buddy-core.git",
-                "reference": "5f068d68e59a7f29dd0cfdd93b210e72b0009d02"
+                "reference": "5a76e730822d2167e12c5e90e65199231edb8964"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/manticoresoftware/buddy-core/zipball/5f068d68e59a7f29dd0cfdd93b210e72b0009d02",
-                "reference": "5f068d68e59a7f29dd0cfdd93b210e72b0009d02",
+                "url": "https://api.github.com/repos/manticoresoftware/buddy-core/zipball/5a76e730822d2167e12c5e90e65199231edb8964",
+                "reference": "5a76e730822d2167e12c5e90e65199231edb8964",
                 "shasum": ""
             },
             "require": {
@@ -752,7 +752,7 @@
                 "issues": "https://github.com/manticoresoftware/buddy-core/issues",
                 "source": "https://github.com/manticoresoftware/buddy-core/tree/main"
             },
-            "time": "2023-05-15T07:40:48+00:00"
+            "time": "2023-05-23T10:46:26+00:00"
         },
         {
             "name": "psr/container",
