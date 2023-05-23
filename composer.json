@@ -1,11 +1,11 @@
 {
-	"name": "manticoresoftware/buddy-plugin-template",
-	"description": "The Buddy template handler plugin",
+	"name": "manticoresoftware/buddy-plugin-show",
+	"description": "The Buddy SHOW plugin",
 	"type": "library",
 	"license": "GPL-2.0-or-later",
 	"autoload": {
 		"psr-4": {
-			"Manticoresearch\\Buddy\\Plugin\\Template\\": "src/"
+			"Manticoresearch\\Buddy\\Plugin\\Show\\": "src/"
 		}
 	},
 	"authors": [
