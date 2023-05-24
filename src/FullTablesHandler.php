@@ -61,14 +61,17 @@ class FullTablesHandler extends BaseHandlerWithTableFormatter {
 			$total = $result[0]['total'] ?? -1;
 
 			// Adjust result row to be mysql like
-			[$data] = $result[0]['data'];
-			$data['Type'] = 'BASE TABLE'; // Set Mysql like table type
-
-			if ($payload->hasCliEndpoint) {
-				return TaskResult::raw($tableFormatter->getTable($time0, [$data], $total));
+			if ($result[0]['data']) {
+				foreach ($result[0]['data'] as &$row) {
+					$row['Type'] = 'BASE TABLE'; // Set Mysql like table type
+				}
 			}
 
-			return TaskResult::withRow($data)
+			if ($payload->hasCliEndpoint) {
+				return TaskResult::raw($tableFormatter->getTable($time0, $result[0]['data'], $total));
+			}
+
+			return TaskResult::withData($result[0]['data'])
 				->column("Tables_in_{$payload->database}", Column::String)
 				->column('Table_type', Column::String);
 		};
