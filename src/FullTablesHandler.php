@@ -63,7 +63,10 @@ class FullTablesHandler extends BaseHandlerWithTableFormatter {
 			// Adjust result row to be mysql like
 			if ($result[0]['data']) {
 				foreach ($result[0]['data'] as &$row) {
-					$row['Type'] = 'BASE TABLE'; // Set Mysql like table type
+					$row = [
+						"Tables_in_{$payload->database}" => $row['Index'],
+						'Table_type' => 'BASE TABLE', // Set Mysql like table type
+					];
 				}
 			}
 
