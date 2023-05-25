@@ -32,6 +32,9 @@ final class Payload extends BasePayload {
 	 */
 	public string $database = 'Manticore';
 
+	/** @var ?string $table */
+	public ?string $table = null;
+
 	/**
 	 * @var string $like
 	 * 	It contains match pattern from LIKE statement if its presented
@@ -50,6 +53,7 @@ final class Payload extends BasePayload {
 			'full tables' => static::fromFullTablesRequest($request),
 			'schemas' => static::fromSchemasRequest($request),
 			'queries' => static::fromQueriesRequest($request),
+			'create table' => static::fromCreateTableRequest($request),
 			default => throw new Exception('Failed to match type of request: ' . static::$type),
 		};
 	}
@@ -102,6 +106,25 @@ final class Payload extends BasePayload {
 
 	/**
 	 * @param Request $request
+	 * @return static
+	 */
+	protected static function fromCreateTableRequest(Request $request): static {
+		$pattern = '/(?:SHOW\s+CREATE\s+TABLE\s+`?)([\w]+)(?:`?\.)`?([\w]+)(?:`?)/i';
+
+		if (!preg_match($pattern, $request->payload, $m)) {
+			throw QueryParseError::create('You have an error in your query. Please, double-check it.');
+		}
+
+		$self = new static();
+		$self->database = $m[1];
+		$self->table = $m[2];
+
+		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
+		return $self;
+	}
+
+	/**
+	 * @param Request $request
 	 * @return bool
 	 */
 	public static function hasMatch(Request $request): bool {
@@ -121,6 +144,11 @@ final class Payload extends BasePayload {
 			return true;
 		}
 
+		if (stripos($request->payload, 'show create table') === 0) {
+			static::$type = 'create table';
+			return true;
+		}
+
 		return false;
 	}
 
@@ -130,6 +158,7 @@ final class Payload extends BasePayload {
 	public function getHandlerClassName(): string {
 		return __NAMESPACE__ . '\\' . match (static::$type) {
 			'full tables' => 'FullTablesHandler',
+			'create table' => 'CreateTableHandler',
 			'schemas' => 'SchemasHandler',
 			'queries' => 'QueriesHandler',
 			default => throw new Exception('Cannot find handler for request type: ' . static::$type),
