@@ -44,6 +44,8 @@ final class Payload extends BasePayload {
 	public string $path;
 	public bool $hasCliEndpoint;
 
+	public string $query;
+
 	/**
 	 * @param Request $request
 	 * @return static
@@ -51,9 +53,9 @@ final class Payload extends BasePayload {
 	public static function fromRequest(Request $request): static {
 		return match (static::$type) {
 			'full tables' => static::fromFullTablesRequest($request),
-			'schemas' => static::fromSchemasRequest($request),
-			'queries' => static::fromQueriesRequest($request),
+			'schemas', 'queries' => static::fromBaseRequest($request),
 			'create table' => static::fromCreateTableRequest($request),
+			'unsupported' => static::fromUnsupportedStmtRequest($request),
 			default => throw new Exception('Failed to match type of request: ' . static::$type),
 		};
 	}
@@ -81,6 +83,27 @@ final class Payload extends BasePayload {
 			$self->like = $m['like'];
 		}
 		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
+		return $self;
+	}
+
+	/**
+	 * @param Request $request
+	 * @return static
+	 */
+	protected static function fromBaseRequest(Request $request): static {
+		$self = new static();
+		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
+		return $self;
+	}
+
+	/**
+	 * @param Request $request
+	 * @return static
+	 */
+	protected static function fromUnsupportedStmtRequest(Request $request): static {
+		$self = new static();
+		[$self->path] = self::getEndpointInfo($request);
+		$self->query = $request->payload;
 		return $self;
 	}
 
@@ -144,9 +167,26 @@ final class Payload extends BasePayload {
 			return true;
 		}
 
-		if (stripos($request->payload, 'show create table') === 0) {
-			static::$type = 'create table';
-			return true;
+		$unsupportedStatements = [
+			'show tables from',
+			'show open tables from',
+			'show table status from',
+			'show function status',
+			'show procedure status',
+			'show triggers from',
+			'show events from',
+			'show session status',
+			'show character set',
+			'show charset',
+			'show variables',
+			'show engines',
+		];
+
+		foreach ($unsupportedStatements as $stmt) {
+			if (stripos($request->payload, $stmt) === 0) {
+				static::$type = 'unsupported';
+				return true;
+			}
 		}
 
 		return false;
@@ -156,12 +196,20 @@ final class Payload extends BasePayload {
 	 * @return string
 	 */
 	public function getHandlerClassName(): string {
-		return __NAMESPACE__ . '\\' . match (static::$type) {
+// 		$namespace = (static::$type === 'unsupported')
+// 			? 'Manticoresearch\\Buddy\\Core\\Plugin\\'
+// 			: __NAMESPACE__ . '\\';
+		$namespace = __NAMESPACE__ . '\\';
+		$handlerName = match (static::$type) {
 			'full tables' => 'FullTablesHandler',
 			'create table' => 'CreateTableHandler',
 			'schemas' => 'SchemasHandler',
 			'queries' => 'QueriesHandler',
+			'charset' => 'CharsetHandler',
+			'unsupported' => 'UnsupportedStmtHandler',
 			default => throw new Exception('Cannot find handler for request type: ' . static::$type),
 		};
+
+		return $namespace . $handlerName;
 	}
 }
