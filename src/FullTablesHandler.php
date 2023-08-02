@@ -44,11 +44,8 @@ class FullTablesHandler extends BaseHandlerWithTableFormatter {
 
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
-		$taskFn = static function (
-			Payload $payload,
-			HTTPClient $manticoreClient,
-			TableFormatter $tableFormatter
-		): TaskResult {
+		$taskFn = static function (string $args): TaskResult {
+			[$payload, $manticoreClient, $tableFormatter] = unserialize($args);
 			$time0 = hrtime(true);
 			// First, get response from the manticore
 			$query = 'SHOW TABLES';
@@ -80,7 +77,7 @@ class FullTablesHandler extends BaseHandlerWithTableFormatter {
 		};
 
 		return Task::createInRuntime(
-			$runtime, $taskFn, [$this->payload, $this->manticoreClient, $this->tableFormatter]
+			$runtime, $taskFn, [serialize([$this->payload, $this->manticoreClient, $this->tableFormatter])]
 		)->run();
 	}
 }

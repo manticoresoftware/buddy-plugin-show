@@ -19,6 +19,7 @@ use Manticoresearch\Buddy\Core\Task\TaskPool;
 use Manticoresearch\Buddy\Core\Task\TaskResult;
 use RuntimeException;
 use parallel\Runtime;
+use Throwable;
 
 /**
  * This is the parent class to handle erroneous Manticore queries
@@ -50,12 +51,10 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 		$this->manticoreClient->setPath($this->payload->path);
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
-		$taskFn = static function (
-			Payload $payload,
-			HTTPClient $manticoreClient,
-			TableFormatter $tableFormatter,
-			array $tasks
-		): TaskResult {
+		$queryFn = $this->getInternalQuery();
+		$taskFn = static function (string $args): TaskResult {
+			[$payload, $manticoreClient, $tableFormatter, $tasks, $queryFn] = unserialize($args);
+			var_dump($queryFn('show full tables'));
 			// First, get response from the manticore
 			$time0 = hrtime(true);
 			$resp = $manticoreClient->sendRequest('SELECT * FROM @@system.sessions');
@@ -73,7 +72,7 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 		return Task::createInRuntime(
 			$runtime,
 			$taskFn,
-			[$this->payload, $this->manticoreClient, $this->tableFormatter, static::getTasksToAppend()]
+			[serialize([$this->payload, $this->manticoreClient, $this->tableFormatter, static::getTasksToAppend(), $queryFn])]
 		)->run();
 	}
 
