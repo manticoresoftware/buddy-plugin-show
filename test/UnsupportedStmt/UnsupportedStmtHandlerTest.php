@@ -21,6 +21,7 @@ use Manticoresearch\Buddy\CoreTest\Trait\TestInEnvironmentTrait;
 use Manticoresearch\Buddy\Plugin\Show\Payload;
 use Manticoresearch\Buddy\Plugin\Show\UnsupportedStmtHandler as Handler;
 use PHPUnit\Framework\TestCase;
+use parallel\Runtime;
 
 class UnsupportedStmtHandlerTest extends TestCase {
 
@@ -32,12 +33,18 @@ class UnsupportedStmtHandlerTest extends TestCase {
 	 */
 	public static $manticoreClient;
 
+	/**
+	 * @var Runtime $runtime
+	 */
+	public static $runtime;
+
 	public static function setUpBeforeClass(): void {
 		self::setTaskRuntime();
 		$serverUrl = self::setUpMockManticoreServer(false);
 		self::setBuddyVersion();
 		self::$manticoreClient = new HTTPClient(new Response(), $serverUrl);
 		Payload::$type = 'unsupported';
+		self::$runtime = Task::createRuntime();
 	}
 
 	public static function tearDownAfterClass(): void {
@@ -62,7 +69,6 @@ class UnsupportedStmtHandlerTest extends TestCase {
 			'show session status',
 			'show session status from manticore',
 		];
-
 		foreach ($testingSet as $query) {
 			$this->checkExecutionResult($query, $columns, $data);
 		}
@@ -331,6 +337,81 @@ class UnsupportedStmtHandlerTest extends TestCase {
 		}
 	}
 
+	public function testShowProcessListExecution():void {
+		echo "\nTesting the execution of SHOW FULL PROCESSLIST\n";
+		$columns = [
+			[
+				'Id' => ['type' => 'long long'],
+			],
+			[
+				'User' => ['type' => 'string'],
+			],
+			[
+				'Host' => ['type' => 'string'],
+			],
+			[
+				'db' => ['type' => 'string'],
+			],
+			[
+				'Command' => ['type' => 'string'],
+			],
+			[
+				'Time' => ['type' => 'long long'],
+			],
+			[
+				'State' => ['type' => 'string'],
+			],
+			[
+				'Info' => ['type' => 'string'],
+			],
+		];
+		$data = [
+			[],
+		];
+
+		$query = 'SHOW FULL PROCESSLIST';
+		$this->checkExecutionResult($query, $columns, $data);
+	}
+
+	public function testShowPrivilegesExecution():void {
+		echo "\nTesting the execution of SHOW PRIVILEGES\n";
+		$columns = [
+			[
+				'Privilege' => ['type' => 'string'],
+			],
+			[
+				'Context' => ['type' => 'string'],
+			],
+			[
+				'Comment' => ['type' => 'string'],
+			],
+		];
+		$data = [
+			[],
+		];
+
+		$query = 'SHOW PRIVILEGES';
+		$this->checkExecutionResult($query, $columns, $data);
+	}
+
+	public function testShowGlobalStatusExecution():void {
+		echo "\nTesting the execution of SHOW GLOBAL STATUS\n";
+		$columns = [
+			[
+				'Variable_name' => ['type' => 'string'],
+			],
+			[
+				'Value' => ['type' => 'string'],
+			],
+		];
+		$data = [
+			[],
+		];
+
+		$query = 'SHOW GLOBAL STATUS';
+		$this->checkExecutionResult($query, $columns, $data);
+	}
+
 	public function testShowEnginesExecution():void {
 		echo "\nTesting the execution of SHOW ENGINES\n";
 		$columns = [
@@ -470,8 +551,7 @@ class UnsupportedStmtHandlerTest extends TestCase {
 		$payload = Payload::fromRequest($request);
 		$handler = new Handler($payload);
 		$handler->setManticoreClient(self::$manticoreClient);
-
-		$task = $handler->run(Task::createRuntime());
+		$task = $handler->run(self::$runtime);
 		$task->wait();
 
 		if ($isExecutionOk) {

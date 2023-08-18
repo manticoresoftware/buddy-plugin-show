@@ -141,7 +141,6 @@ final class Payload extends BasePayload {
 		$self = new static();
 		$self->database = $m[1];
 		$self->table = $m[2];
-
 		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
 		return $self;
 	}
@@ -180,6 +179,10 @@ final class Payload extends BasePayload {
 			'show charset',
 			'show variables',
 			'show engines',
+			'show create table',
+			'show full processlist',
+			'show privileges',
+			'show global status',
 		];
 
 		foreach ($unsupportedStatements as $stmt) {
@@ -188,7 +191,6 @@ final class Payload extends BasePayload {
 				return true;
 			}
 		}
-
 		return false;
 	}
 
@@ -196,9 +198,6 @@ final class Payload extends BasePayload {
 	 * @return string
 	 */
 	public function getHandlerClassName(): string {
-// 		$namespace = (static::$type === 'unsupported')
-// 			? 'Manticoresearch\\Buddy\\Core\\Plugin\\'
-// 			: __NAMESPACE__ . '\\';
 		$namespace = __NAMESPACE__ . '\\';
 		$handlerName = match (static::$type) {
 			'full tables' => 'FullTablesHandler',

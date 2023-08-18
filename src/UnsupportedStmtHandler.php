@@ -21,12 +21,14 @@ use RuntimeException;
 use parallel\Runtime;
 
 /**
- * This is the handler class to process MySQL SHOW statements with the WHERE clause
+ * This is the parent class to handle erroneous Manticore queries
  */
 class UnsupportedStmtHandler extends BaseHandlerWithClient {
-
-	const EMPTY_DATA = [
-		[],
+	const COL_MAP = [
+		'connid' => 'id',
+		'last cmd' => 'query',
+		'proto' => 'protocol',
+		'host' => 'host',
 	];
 
 	/**
@@ -46,7 +48,6 @@ class UnsupportedStmtHandler extends BaseHandlerWithClient {
 	 */
 	public function run(Runtime $runtime): Task {
 		$this->manticoreClient->setPath($this->payload->path);
-
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
 		$taskFn = static function (
@@ -69,18 +70,111 @@ class UnsupportedStmtHandler extends BaseHandlerWithClient {
 	}
 
 	/**
+	 * Helper function to return the empty result for an unsupported query
+	 *
+	 * @param Payload $payload
+	 * @throws RuntimeException
+	 */
+	public static function checkForNoDataResponse(Payload $payload):TaskResult {
+		if (preg_match('/^show (function|procedure)? status(\s.*|$)/is', $payload->query)) {
+			return TaskResult::withData([[]])
+				->column('Db', Column::String)
+				->column('Name', Column::String)
+				->column('Type', Column::String)
+				->column('Definer', Column::String)
+				->column('Modified', Column::String)
+				->column('Created', Column::String)
+				->column('Security_type', Column::String)
+				->column('Comment', Column::String)
+				->column('character_set_client', Column::String)
+				->column('collation_connection', Column::String)
+				->column('Database Collation', Column::String);
+		}
+		if (stripos($payload->query, 'show triggers from') === 0) {
+			return TaskResult::withData([[]])
+				->column('Trigger', Column::String)
+				->column('Event', Column::String)
+				->column('Table', Column::String)
+				->column('Statement', Column::String)
+				->column('Timing', Column::String)
+				->column('Created', Column::String)
+				->column('sql_mode', Column::String)
+				->column('Definer', Column::String)
+				->column('character_set_client', Column::String)
+				->column('collation_connection', Column::String)
+				->column('Database Collation', Column::String);
+		}
+		if (stripos($payload->query, 'show events from') === 0) {
+			return TaskResult::withData([[]])
+				->column('Db', Column::String)
+				->column('Name', Column::String)
+				->column('Definer', Column::String)
+				->column('Time zone', Column::String)
+				->column('Type', Column::String)
+				->column('Execute at', Column::String)
+				->column('Interval value', Column::String)
+				->column('Interval field', Column::String)
+				->column('Starts', Column::String)
+				->column('Ends', Column::String)
+				->column('Status', Column::String)
+				->column('Originator', Column::String)
+				->column('character_set_client', Column::String)
+				->column('collation_connection', Column::String)
+				->column('Database Collation', Column::String);
+		}
+		if (stripos($payload->query, 'show session status') === 0) {
+			return TaskResult::withData([[]])
+				->column('Variable_name', Column::String)
+				->column('Value', Column::String);
+		}
+		if (stripos($payload->query, 'show character set') === 0) {
+			return TaskResult::withData([[]])
+			->column('Charset', Column::String)
+			->column('Description', Column::String)
+			->column('Default collation', Column::String)
+			->column('Maxlen', Column::Long);
+		}
+		if (stripos($payload->query, 'show create table') === 0) {
+			return TaskResult::withData([[]])
+				->column('Table', Column::String)
+				->column('Create table', Column::String);
+		}
+		if (stripos($payload->query, 'show full processlist') === 0) {
+			return TaskResult::withData([[]])
+				->column('Id', Column::Long)
+				->column('User', Column::String)
+				->column('Host', Column::String)
+				->column('db', Column::String)
+				->column('Command', Column::String)
+				->column('Time', Column::Long)
+				->column('State', Column::String)
+				->column('Info', Column::String);
+		}
+		if (stripos($payload->query, 'show privileges') === 0) {
+			return TaskResult::withData([[]])
+				->column('Privilege', Column::String)
+				->column('Context', Column::String)
+				->column('Comment', Column::String);
+		}
+		if (stripos($payload->query, 'show global status') === 0) {
+			return TaskResult::withData([[]])
+				->column('Variable_name', Column::String)
+				->column('Value', Column::String);
+		}
+		throw new \RuntimeException('Cannot handle unsupported query');
+	}
+
+	/**
 	 * Process the request query and return the result of task execution
 	 *
 	 * @param Payload $payload
 	 * @param HTTPClient $manticoreClient
 	 * @return TaskResult
-	 * @throws RuntimeException
 	 */
 	public static function handleQuery(
 		Payload $payload,
 		HTTPClient $manticoreClient
 	): TaskResult {
-		$data = self::EMPTY_DATA;
 		if (preg_match('/^show tables from (information_schema|`information_schema`)$/is', $payload->query)) {
 			$data = [
 				[
@@ -101,20 +195,6 @@ class UnsupportedStmtHandler extends BaseHandlerWithClient {
 			];
 			return TaskResult::withData($data)
 				->column('Tables_in_information_schema', Column::String);
-		}
-		if (preg_match('/^show (function|procedure)? status(\s.*|$)/is', $payload->query)) {
-			return TaskResult::withData($data)
-				->column('Db', Column::String)
-				->column('Name', Column::String)
-				->column('Type', Column::String)
-				->column('Definer', Column::String)
-				->column('Modified', Column::String)
-				->column('Created', Column::String)
-				->column('Security_type', Column::String)
-				->column('Comment', Column::String)
-				->column('character_set_client', Column::String)
-				->column('collation_connection', Column::String)
-				->column('Database Collation', Column::String);
 		}
 		if (preg_match('/^show( open)? tables from (Manticore|`Manticore`)(\s.*|$)/is', $payload->query)) {
 			$query = 'SHOW TABLES';
@@ -150,43 +230,6 @@ class UnsupportedStmtHandler extends BaseHandlerWithClient {
 				->column('Create_options', Column::String)
 				->column('Comment', Column::String);
 		}
-		if (stripos($payload->query, 'show triggers from') === 0) {
-			return TaskResult::withData($data)
-				->column('Trigger', Column::String)
-				->column('Event', Column::String)
-				->column('Table', Column::String)
-				->column('Statement', Column::String)
-				->column('Timing', Column::String)
-				->column('Created', Column::String)
-				->column('sql_mode', Column::String)
-				->column('Definer', Column::String)
-				->column('character_set_client', Column::String)
-				->column('collation_connection', Column::String)
-				->column('Database Collation', Column::String);
-		}
-		if (stripos($payload->query, 'show events from') === 0) {
-			return TaskResult::withData($data)
-				->column('Db', Column::String)
-				->column('Name', Column::String)
-				->column('Definer', Column::String)
-				->column('Time zone', Column::String)
-				->column('Type', Column::String)
-				->column('Execute at', Column::String)
-				->column('Interval value', Column::String)
-				->column('Interval field', Column::String)
-				->column('Starts', Column::String)
-				->column('Ends', Column::String)
-				->column('Status', Column::String)
-				->column('Originator', Column::String)
-				->column('character_set_client', Column::String)
-				->column('collation_connection', Column::String)
-				->column('Database Collation', Column::String);
-		}
-		if (stripos($payload->query, 'show session status') === 0) {
-			return TaskResult::withData($data)
-				->column('Variable_name', Column::String)
-				->column('Value', Column::String);
-		}
 		if (stripos($payload->query, 'show engines') === 0) {
 			$data = [
 				[
@@ -205,13 +248,6 @@ class UnsupportedStmtHandler extends BaseHandlerWithClient {
 				->column('Transactions', Column::String)
 				->column('XA', Column::String)
 				->column('Savepoints', Column::String);
-		}
-		if (stripos($payload->query, 'show character set') === 0) {
-			return TaskResult::withData($data)
-				->column('Charset', Column::String)
-				->column('Description', Column::String)
-				->column('Default collation', Column::String)
-				->column('Maxlen', Column::Long);
 		}
 		if (stripos($payload->query, 'show charset') === 0) {
 			$data = [
@@ -240,7 +276,8 @@ class UnsupportedStmtHandler extends BaseHandlerWithClient {
 			} catch (QueryParseError) {
 			}
 		}
-		throw new \RuntimeException('Cannot handle unsupported query');
+
+		return self::checkForNoDataResponse($payload);
 	}
 
 	/**
@@ -268,7 +305,6 @@ class UnsupportedStmtHandler extends BaseHandlerWithClient {
 		} else {
 			$condValue = $match['condValue'];
 		}
-		//echo $condValue . PHP_EOL;
 		$res = array_filter(
 			$data,
 			function ($v) use ($cond, $condValue, $varColumn) {
@@ -278,4 +314,5 @@ class UnsupportedStmtHandler extends BaseHandlerWithClient {
 		);
 		return empty($res) ? [[]] : $res;
 	}
+
 }
