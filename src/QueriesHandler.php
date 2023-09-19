@@ -50,12 +50,14 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 		$this->manticoreClient->setPath($this->payload->path);
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
-		$taskFn = static function (
-			Payload $payload,
-			HTTPClient $manticoreClient,
-			TableFormatter $tableFormatter,
-			array $tasks
-		): TaskResult {
+		$taskFn = static function (string $args): TaskResult {
+			/** @var Payload $payload */
+			/** @var HTTPClient $manticoreClient */
+			/** @var TableFormatter $tableFormatter */
+			/** @var array<mixed> $tasks */
+			/** @phpstan-ignore-next-line */
+			[$payload, $manticoreClient, $tableFormatter, $tasks] = unserialize($args);
+
 			// First, get response from the manticore
 			$time0 = hrtime(true);
 			$resp = $manticoreClient->sendRequest('SELECT * FROM @@system.sessions');
@@ -73,7 +75,7 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 		return Task::createInRuntime(
 			$runtime,
 			$taskFn,
-			[$this->payload, $this->manticoreClient, $this->tableFormatter, static::getTasksToAppend()]
+			[serialize([$this->payload, $this->manticoreClient, $this->tableFormatter, static::getTasksToAppend()])]
 		)->run();
 	}
 
