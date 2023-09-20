@@ -43,11 +43,12 @@ class CreateTableHandler extends BaseHandlerWithTableFormatter {
 
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
-		$taskFn = static function (
-			Payload $payload,
-			HTTPClient $manticoreClient,
-			TableFormatter $tableFormatter
-		): TaskResult {
+		$taskFn = static function (string $args): TaskResult {
+			/** @var Payload $payload */
+			/** @var HTTPClient $manticoreClient */
+			/** @var TableFormatter $tableFormatter */
+			/** @phpstan-ignore-next-line */
+			[$payload, $manticoreClient, $tableFormatter] = unserialize($args);
 			$time0 = hrtime(true);
 			// First, get response from the manticore
 			$query = "SHOW CREATE TABLE {$payload->table}";
@@ -77,7 +78,9 @@ class CreateTableHandler extends BaseHandlerWithTableFormatter {
 		};
 
 		return Task::createInRuntime(
-			$runtime, $taskFn, [$this->payload, $this->manticoreClient, $this->tableFormatter]
+			$runtime,
+			$taskFn,
+			[serialize([$this->payload, $this->manticoreClient, $this->tableFormatter])]
 		)->run();
 	}
 }
