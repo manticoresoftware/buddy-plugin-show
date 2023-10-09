@@ -54,6 +54,8 @@ final class Payload extends BasePayload {
 			'schemas' => static::fromSchemasRequest($request),
 			'queries' => static::fromQueriesRequest($request),
 			'create table' => static::fromCreateTableRequest($request),
+			'index', 'function status' => static::fromSimpleRequest($request),
+			'full columns' => static::fromColumnsRequest($request),
 			default => throw new Exception('Failed to match type of request: ' . static::$type),
 		};
 	}
@@ -125,6 +127,31 @@ final class Payload extends BasePayload {
 
 	/**
 	 * @param Request $request
+	 * @return static
+	 */
+	protected static function fromSimpleRequest(Request $request): static {
+		$self = new static();
+		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
+		return $self;
+	}
+
+	/**
+	 * @param Request $request
+	 * @return static
+	 */
+	protected static function fromColumnsRequest(Request $request): static {
+		$pattern = '/(?:SHOW\s+FULL\s+COLUMNS\s+FROM\s+`?)([\w]+)(?:`?\s+FROM\s+`?)([\w]+)(?:`?\s+LIKE\s+\'%\'?)/i';
+		if (!preg_match($pattern, $request->payload, $m)) {
+	    throw QueryParseError::create('You have an error in your query. Please, double-check it.');
+		}
+		$self = new static();
+		$self->database = $m[2];
+		$self->table = $m[1];
+		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
+		return $self;
+	}
+	/**
+	 * @param Request $request
 	 * @return bool
 	 */
 	public static function hasMatch(Request $request): bool {
@@ -149,6 +176,23 @@ final class Payload extends BasePayload {
 			return true;
 		}
 
+		if (stripos($request->payload, 'show full columns') === 0) {
+			static::$type = 'full columns';
+			return true;
+		}
+
+		if (stripos($request->payload, 'show index') === 0 ||
+			stripos($request->payload, 'show keys') === 0) {
+			static::$type = 'index';
+			return true;
+		}
+
+		if (stripos($request->payload, 'show function status') === 0
+		|| stripos($request->payload, 'show procedure status') === 0) {
+			static::$type = 'function status';
+			return true;
+		}
+
 		return false;
 	}
 
@@ -161,6 +205,9 @@ final class Payload extends BasePayload {
 			'create table' => 'CreateTableHandler',
 			'schemas' => 'SchemasHandler',
 			'queries' => 'QueriesHandler',
+			'index' => 'EmptyHandler',
+			'function status' => 'FunctionStatusHandler',
+			'full columns' => 'FullColumnsHandler',
 			default => throw new Exception('Cannot find handler for request type: ' . static::$type),
 		};
 	}
