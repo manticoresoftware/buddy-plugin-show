@@ -11,14 +11,13 @@
 
 namespace Manticoresearch\Buddy\Plugin\Show;
 
-use Manticoresearch\Buddy\Core\ManticoreSearch\Client as HTTPClient;
+use Manticoresearch\Buddy\Core\ManticoreSearch\Client;
 use Manticoresearch\Buddy\Core\Plugin\BaseHandlerWithTableFormatter;
 use Manticoresearch\Buddy\Core\Plugin\TableFormatter;
 use Manticoresearch\Buddy\Core\Task\Task;
 use Manticoresearch\Buddy\Core\Task\TaskPool;
 use Manticoresearch\Buddy\Core\Task\TaskResult;
 use RuntimeException;
-use parallel\Runtime;
 
 /**
  * This is the parent class to handle erroneous Manticore queries
@@ -46,18 +45,11 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 	 * @return Task
 	 * @throws RuntimeException
 	 */
-	public function run(Runtime $runtime): Task {
+	public function run(): Task {
 		$this->manticoreClient->setPath($this->payload->path);
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
-		$taskFn = static function (string $args): TaskResult {
-			/** @var Payload $payload */
-			/** @var HTTPClient $manticoreClient */
-			/** @var TableFormatter $tableFormatter */
-			/** @var array<mixed> $tasks */
-			/** @phpstan-ignore-next-line */
-			[$payload, $manticoreClient, $tableFormatter, $tasks] = unserialize($args);
-
+		$taskFn = static function (Payload $payload, Client $manticoreClient, TableFormatter $tableFormatter, array $tasks): TaskResult {
 			// First, get response from the manticore
 			$time0 = hrtime(true);
 			$resp = $manticoreClient->sendRequest('SELECT * FROM @@system.sessions');
@@ -72,10 +64,9 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 			return TaskResult::raw($result);
 		};
 
-		return Task::createInRuntime(
-			$runtime,
+		return Task::create(
 			$taskFn,
-			[serialize([$this->payload, $this->manticoreClient, $this->tableFormatter, static::getTasksToAppend()])]
+			[$this->payload, $this->manticoreClient, $this->tableFormatter, static::getTasksToAppend()]
 		)->run();
 	}
 

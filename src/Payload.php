@@ -142,7 +142,7 @@ final class Payload extends BasePayload {
 	protected static function fromColumnsRequest(Request $request): static {
 		$pattern = '/(?:SHOW\s+FULL\s+COLUMNS\s+FROM\s+`?)([\w]+)(?:`?\s+FROM\s+`?)([\w]+)(?:`?\s+LIKE\s+\'%\'?)/i';
 		if (!preg_match($pattern, $request->payload, $m)) {
-	    throw QueryParseError::create('You have an error in your query. Please, double-check it.');
+			throw QueryParseError::create('You have an error in your query. Please, double-check it.');
 		}
 		$self = new static();
 		$self->database = $m[2];
@@ -181,8 +181,8 @@ final class Payload extends BasePayload {
 			return true;
 		}
 
-		if (stripos($request->payload, 'show index') === 0 ||
-			stripos($request->payload, 'show keys') === 0) {
+		if (stripos($request->payload, 'show index') === 0
+			|| stripos($request->payload, 'show keys') === 0) {
 			static::$type = 'index';
 			return true;
 		}

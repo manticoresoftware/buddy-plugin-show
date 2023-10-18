@@ -11,12 +11,12 @@
 
 namespace Manticoresearch\Buddy\Plugin\Show;
 
+use Manticoresearch\Buddy\Core\ManticoreSearch\Client;
 use Manticoresearch\Buddy\Core\Plugin\BaseHandlerWithTableFormatter;
 use Manticoresearch\Buddy\Core\Task\Column;
 use Manticoresearch\Buddy\Core\Task\Task;
 use Manticoresearch\Buddy\Core\Task\TaskResult;
 use RuntimeException;
-use parallel\Runtime;
 
 /**
  * This is the parent class to handle erroneous Manticore queries
@@ -37,7 +37,7 @@ class FullColumnsHandler extends BaseHandlerWithTableFormatter {
 	 * @return Task
 	 * @throws RuntimeException
 	 */
-	public function run(Runtime $runtime): Task {
+	public function run(): Task {
 		$this->manticoreClient->setPath($this->payload->path);
 
 		//      Field: updated_at
@@ -52,12 +52,7 @@ class FullColumnsHandler extends BaseHandlerWithTableFormatter {
 
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
-		$taskFn = static function (string $args): TaskResult {
-			/** @var Payload $payload */
-			/** @var HTTPClient $manticoreClient */
-			/** @phpstan-ignore-next-line */
-			[$payload, $manticoreClient] = unserialize($args);
-
+		$taskFn = static function (Payload $payload, Client $manticoreClient): TaskResult {
 			$query = "DESC {$payload->table}";
 			/** @var array{0:array{data:array<mixed>}} */
 			$result = $manticoreClient->sendRequest($query)->getResult();
@@ -73,11 +68,14 @@ class FullColumnsHandler extends BaseHandlerWithTableFormatter {
 				'Comment' => '',
 			];
 			$data = [];
+			/** @var array{Field:string,Type:string} $row */
 			foreach ($result[0]['data'] as $row) {
-				$data[] = array_replace($base, [
+				$data[] = array_replace(
+					$base, [
 					'Field' => $row['Field'],
 					'Type' => $row['Type'],
-				]);
+					]
+				);
 			}
 
 			return TaskResult::withData($data)
@@ -89,14 +87,12 @@ class FullColumnsHandler extends BaseHandlerWithTableFormatter {
 				->column('Default', Column::String)
 				->column('Extra', Column::String)
 				->column('Privileges', Column::String)
-				->column('Comment', Column::String)
-			;
+				->column('Comment', Column::String);
 		};
 
-		return Task::createInRuntime(
-			$runtime,
+		return Task::create(
 			$taskFn,
-			[serialize([$this->payload, $this->manticoreClient])]
+			[$this->payload, $this->manticoreClient]
 		)->run();
 	}
 }

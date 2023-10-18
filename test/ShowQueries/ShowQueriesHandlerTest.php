@@ -63,8 +63,7 @@ class ShowQueriesHandlerTest extends TestCase {
 		$handler = new Handler($payload);
 		$handler->setManticoreClient($manticoreClient);
 		$handler->setTableFormatter(new TableFormatter());
-		self::setTaskRuntime();
-		$task = $handler->run(Task::createRuntime());
+		$task = $handler->run();
 		$task->wait();
 		$this->assertEquals(true, $task->isSucceed());
 		$result = $task->getResult()->getStruct();

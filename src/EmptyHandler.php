@@ -15,7 +15,6 @@ use Manticoresearch\Buddy\Core\Plugin\BaseHandlerWithTableFormatter;
 use Manticoresearch\Buddy\Core\Task\Task;
 use Manticoresearch\Buddy\Core\Task\TaskResult;
 use RuntimeException;
-use parallel\Runtime;
 
 /**
  * This is the parent class to handle erroneous Manticore queries
@@ -36,7 +35,7 @@ class EmptyHandler extends BaseHandlerWithTableFormatter {
 	 * @return Task
 	 * @throws RuntimeException
 	 */
-	public function run(Runtime $runtime): Task {
+	public function run(): Task {
 		$this->manticoreClient->setPath($this->payload->path);
 
 		// We run in a thred anyway but in case if we need blocking
@@ -45,10 +44,6 @@ class EmptyHandler extends BaseHandlerWithTableFormatter {
 			return TaskResult::withTotal(0);
 		};
 
-		return Task::createInRuntime(
-			$runtime,
-			$taskFn,
-			[]
-		)->run();
+		return Task::create($taskFn, [])->run();
 	}
 }

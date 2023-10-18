@@ -16,7 +16,6 @@ use Manticoresearch\Buddy\Core\Task\Column;
 use Manticoresearch\Buddy\Core\Task\Task;
 use Manticoresearch\Buddy\Core\Task\TaskResult;
 use RuntimeException;
-use parallel\Runtime;
 
 /**
  * This is the parent class to handle erroneous Manticore queries
@@ -37,7 +36,7 @@ class FunctionStatusHandler extends BaseHandlerWithTableFormatter {
 	 * @return Task
 	 * @throws RuntimeException
 	 */
-	public function run(Runtime $runtime): Task {
+	public function run(): Task {
 		$this->manticoreClient->setPath($this->payload->path);
 
 		// We run in a thread anyway but in case if we need blocking
@@ -54,14 +53,9 @@ class FunctionStatusHandler extends BaseHandlerWithTableFormatter {
 				->column('Invoker', Column::String)
 				->column('character_set_client', Column::String)
 				->column('collation_connection', Column::String)
-				->column('Database Collation', Column::String)
-			;
+				->column('Database Collation', Column::String);
 		};
 
-		return Task::createInRuntime(
-			$runtime,
-			$taskFn,
-			[]
-		)->run();
+		return Task::create($taskFn, [])->run();
 	}
 }
