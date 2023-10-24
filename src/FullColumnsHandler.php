@@ -38,8 +38,6 @@ class FullColumnsHandler extends BaseHandlerWithTableFormatter {
 	 * @throws RuntimeException
 	 */
 	public function run(): Task {
-		$this->manticoreClient->setPath($this->payload->path);
-
 		//      Field: updated_at
 		//       Type: int unsigned
 		//  Collation: NULL
@@ -55,7 +53,7 @@ class FullColumnsHandler extends BaseHandlerWithTableFormatter {
 		$taskFn = static function (Payload $payload, Client $manticoreClient): TaskResult {
 			$query = "DESC {$payload->table}";
 			/** @var array{0:array{data:array<mixed>}} */
-			$result = $manticoreClient->sendRequest($query)->getResult();
+			$result = $manticoreClient->sendRequest($query, $payload->path)->getResult();
 			$base = [
 				'Field' => '',
 				'Type' => '',

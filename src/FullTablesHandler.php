@@ -39,8 +39,6 @@ class FullTablesHandler extends BaseHandlerWithTableFormatter {
 	 * @throws RuntimeException
 	 */
 	public function run(): Task {
-		$this->manticoreClient->setPath($this->payload->path);
-
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
 		$taskFn = static function (Payload $payload, Client $manticoreClient, TableFormatter $tableFormatter): TaskResult {
@@ -50,7 +48,7 @@ class FullTablesHandler extends BaseHandlerWithTableFormatter {
 			if ($payload->like) {
 				$query .= " LIKE '{$payload->like}'";
 			}
-			$resp = $manticoreClient->sendRequest($query);
+			$resp = $manticoreClient->sendRequest($query, $payload->path);
 			/** @var array<int,array{error:string,data:array<int,array<string,string>>,total?:int,columns?:string}> $result */
 			$result = $resp->getResult();
 			$total = $result[0]['total'] ?? -1;

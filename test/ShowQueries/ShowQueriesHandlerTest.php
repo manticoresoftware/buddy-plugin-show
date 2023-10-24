@@ -15,7 +15,6 @@ use Manticoresearch\Buddy\Core\ManticoreSearch\RequestFormat;
 use Manticoresearch\Buddy\Core\ManticoreSearch\Response;
 use Manticoresearch\Buddy\Core\Network\Request as NetRequest;
 use Manticoresearch\Buddy\Core\Plugin\TableFormatter;
-use Manticoresearch\Buddy\Core\Task\Task;
 use Manticoresearch\Buddy\CoreTest\Trait\TestHTTPServerTrait;
 use Manticoresearch\Buddy\CoreTest\Trait\TestInEnvironmentTrait;
 use Manticoresearch\Buddy\Plugin\Show\Payload;

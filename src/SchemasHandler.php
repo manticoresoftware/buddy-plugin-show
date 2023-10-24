@@ -39,8 +39,6 @@ class SchemasHandler extends BaseHandlerWithTableFormatter {
 	 * @throws RuntimeException
 	 */
 	public function run(): Task {
-		$this->manticoreClient->setPath($this->payload->path);
-
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
 		$taskFn = static function (Payload $payload, Client $manticoreClient, TableFormatter $tableFormatter): TaskResult {
@@ -48,7 +46,7 @@ class SchemasHandler extends BaseHandlerWithTableFormatter {
 			// First, get response from the manticore
 			$query = 'SHOW DATABASES';
 			/** @var array{0:array{data:array<mixed>}} */
-			$result = $manticoreClient->sendRequest($query)->getResult();
+			$result = $manticoreClient->sendRequest($query, $payload->path)->getResult();
 			$total = sizeof($result[0]['data']);
 			if ($payload->hasCliEndpoint) {
 				return TaskResult::raw($tableFormatter->getTable($time0, $result[0]['data'], $total));

@@ -46,13 +46,15 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 	 * @throws RuntimeException
 	 */
 	public function run(): Task {
-		$this->manticoreClient->setPath($this->payload->path);
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
 		$taskFn = static function (Payload $payload, Client $manticoreClient, TableFormatter $tableFormatter, array $tasks): TaskResult {
 			// First, get response from the manticore
 			$time0 = hrtime(true);
-			$resp = $manticoreClient->sendRequest('SELECT * FROM @@system.sessions');
+			$resp = $manticoreClient->sendRequest(
+				'SELECT * FROM @@system.sessions',
+				$payload->path
+			);
 			$result = static::formatResponse($resp->getBody());
 			// Second, get our own queries and append to the final result
 			/** @var array{0:array{data:array<mixed>,total:int}} $result */
@@ -133,10 +135,10 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 		foreach ($tasks as $task) {
 			// ! same order as in COL_MAP
 			$data[] = [
-				'id' => $task->getId(),
-				'query' => $task->getBody(),
+				'id' => $task['id'],
+				'query' => $task['body'],
 				'protocol' => 'http',
-				'host' => $task->getHost(),
+				'host' => $task['host'],
 			];
 		}
 
