@@ -48,7 +48,12 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 	public function run(): Task {
 		// We run in a thread anyway but in case if we need blocking
 		// We just waiting for a thread to be done
-		$taskFn = static function (Payload $payload, Client $manticoreClient, TableFormatter $tableFormatter, array $tasks): TaskResult {
+		$taskFn = static function (
+			Payload $payload,
+			Client $manticoreClient,
+			TableFormatter $tableFormatter,
+			array $tasks
+		): TaskResult {
 			// First, get response from the manticore
 			$time0 = hrtime(true);
 			$resp = $manticoreClient->sendRequest(
@@ -132,6 +137,7 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 	protected static function getTasksToAppend(): array {
 		$data = [];
 		$tasks = TaskPool::getList();
+		/** @var array{id:int,protocol:string,host:string,body:string} $task */
 		foreach ($tasks as $task) {
 			// ! same order as in COL_MAP
 			$data[] = [
