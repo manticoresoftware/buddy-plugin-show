@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 /*
   Copyright (c) 2023, Manticore Software LTD (https://manticoresearch.com)
@@ -22,63 +20,61 @@ use RuntimeException;
 
 final class VersionHandler extends BaseHandlerWithClient
 {
-    /**
-     * Initialize the executor
-     *
-     * @param  Payload  $payload
-     * @return void
-     */
-    public function __construct(public Payload $payload)
-    {
-    }
+	/**
+	 * Initialize the executor
+	 *
+	 * @param  Payload  $payload
+	 * @return void
+	 */
+	public function __construct(public Payload $payload) {
+	}
 
-    /**
-     * Process the request
-     *
-     * @return Task
-     * @throws RuntimeException
-     */
-    public function run(): Task
-    {
-        $taskFn = static function (Client $manticoreClient): TaskResult {
-            $query = "SHOW STATUS like 'version'";
+	/**
+	 * Process the request
+	 *
+	 * @return Task
+	 * @throws RuntimeException
+	 */
+	public function run(): Task {
+		$taskFn = static function (Client $manticoreClient): TaskResult {
+			$query = "SHOW STATUS like 'version'";
 
-            $result = $manticoreClient->sendRequest($query)->getResult();
+			$result = $manticoreClient->sendRequest($query)->getResult();
 
-            $versions = [];
-            if (isset($result[0]['data'][0]['Value'])) {
-                $value = $result[0]['data'][0]['Value'];
+			$versions = [];
+			if (is_array($result) && isset($result[0]['data'][0]['Value'])) {
+				$value = $result[0]['data'][0]['Value'];
 
-                $splittedVersions = explode('(', $value);
+				$splittedVersions = explode('(', $value);
 
-                foreach ($splittedVersions as $version) {
-                    $version = trim($version);
+				foreach ($splittedVersions as $version) {
+					$version = trim($version);
 
-                    if ($version[mb_strlen($version) - 1] === ')') {
-                        $version = substr($version, 0, -1);
-                    }
+					if ($version[mb_strlen($version) - 1] === ')') {
+						$version = substr($version, 0, -1);
+					}
 
-                    $exploded = explode(' ', $version);
+					$exploded = explode(' ', $version);
 
-                    $component = 'Daemon';
-                    if (in_array($exploded[0], ['columnar', 'secondary', 'buddy'])) {
-                        $component = ucfirst($exploded[0]);
-                    } elseif ($exploded[0] === 'knn') {
-                        $component = 'KNN';
-                    }
+					$component = 'Daemon';
+					if (in_array($exploded[0], ['columnar', 'secondary', 'buddy'])) {
+						$component = ucfirst($exploded[0]);
+					} elseif ($exploded[0] === 'knn') {
+						$component = 'KNN';
+					}
 
-                    $versions[] = ['Component' => $component, 'Version' => $version];
-                }
-            }
+					$versions[] = ['Component' => $component, 'Version' => $version];
+				}
+			}
 
 
-            return TaskResult::withData($versions)
-                ->column('Component', Column::String)
-                ->column('Version', Column::String);
-        };
+			return TaskResult::withData($versions)
+				->column('Component', Column::String)
+				->column('Version', Column::String);
+		};
 
-        return Task::create(
-            $taskFn, [$this->manticoreClient]
-        )->run();
-    }
+		return Task::create(
+			$taskFn, [$this->manticoreClient]
+		)->run();
+	}
 }

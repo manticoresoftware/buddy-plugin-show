@@ -54,7 +54,7 @@ final class Payload extends BasePayload {
 			'schemas' => static::fromSchemasRequest($request),
 			'queries' => static::fromQueriesRequest($request),
 			'create table' => static::fromCreateTableRequest($request),
-            'version' => static::fromVersionRequest($request),
+			'version' => static::fromVersionRequest($request),
 			'index', 'function status' => static::fromSimpleRequest($request),
 			'full columns' => static::fromColumnsRequest($request),
 			default => throw new Exception('Failed to match type of request: ' . static::$type),
@@ -107,15 +107,15 @@ final class Payload extends BasePayload {
 		return $self;
 	}
 
-    /**
-     * @param Request $request
-     * @return static
-     */
-    protected static function fromVersionRequest(Request $request): static {
-        $self = new static();
-        [$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
-        return $self;
-    }
+	/**
+	 * @param Request $request
+	 * @return static
+	 */
+	protected static function fromVersionRequest(Request $request): static {
+		$self = new static();
+		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
+		return $self;
+	}
 
 	/**
 	 * @param Request $request
@@ -216,7 +216,7 @@ final class Payload extends BasePayload {
 			'create table' => 'CreateTableHandler',
 			'schemas' => 'SchemasHandler',
 			'queries' => 'QueriesHandler',
-            'version' => 'VersionHandler',
+			'version' => 'VersionHandler',
 			'index' => 'EmptyHandler',
 			'function status' => 'FunctionStatusHandler',
 			'full columns' => 'FullColumnsHandler',
