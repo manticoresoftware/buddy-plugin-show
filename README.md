@@ -17,7 +17,7 @@ This is an initial template of a plugin for [Buddy](https://github.com/manticore
 2. Run this command to create a Docker image named `manticore-buddy`:
 
     ```bash
-    docker run --privileged --entrypoint bash -v $(pwd):/workdir -w /workdir --name manticore-buddy  --network host -it manticoresearch/manticore-executor-kit:latest
+    docker run --privileged --entrypoint bash -v $(pwd):/workdir -w /workdir --name manticore-buddy  --network host -it image: ghcr.io/manticoresoftware/manticoresearch:test-kit-latest:latest
     ```
 
 3. Now you can edit `/etc/manticore.conf` and configure the development version of Buddy:
