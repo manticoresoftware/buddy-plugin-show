@@ -39,36 +39,7 @@ final class VersionHandler extends BaseHandlerWithClient
 		$taskFn = static function (Client $manticoreClient): TaskResult {
 			$query = "SHOW STATUS like 'version'";
 
-			$result = $manticoreClient->sendRequest($query)->getResult();
-
-			$versions = [];
-			if (is_array($result) && isset($result[0]['data'][0]['Value'])) {
-				$value = $result[0]['data'][0]['Value'];
-
-				$splittedVersions = explode('(', $value);
-
-				foreach ($splittedVersions as $version) {
-					$version = trim($version);
-
-					if ($version[mb_strlen($version) - 1] === ')') {
-						$version = substr($version, 0, -1);
-					}
-
-					$exploded = explode(' ', $version);
-
-					$component = 'Daemon';
-					if (in_array($exploded[0], ['columnar', 'secondary', 'buddy'])) {
-						$component = ucfirst($exploded[0]);
-					} elseif ($exploded[0] === 'knn') {
-						$component = 'KNN';
-					}
-
-					$versions[] = ['Component' => $component, 'Version' => $version];
-				}
-			}
-
-
-			return TaskResult::withData($versions)
+			return TaskResult::withData(self::parseVersions($manticoreClient->sendRequest($query)->getResult()))
 				->column('Component', Column::String)
 				->column('Version', Column::String);
 		};
@@ -76,5 +47,35 @@ final class VersionHandler extends BaseHandlerWithClient
 		return Task::create(
 			$taskFn, [$this->manticoreClient]
 		)->run();
+	}
+
+	private function parseVersions(mixed $result):array {
+		$versions = [];
+		if (is_array($result) && isset($result[0]['data'][0]['Value'])) {
+			$value = $result[0]['data'][0]['Value'];
+
+			$splittedVersions = explode('(', $value);
+
+			foreach ($splittedVersions as $version) {
+				$version = trim($version);
+
+				if ($version[mb_strlen($version) - 1] === ')') {
+					$version = substr($version, 0, -1);
+				}
+
+				$exploded = explode(' ', $version);
+
+				$component = 'Daemon';
+				if (in_array($exploded[0], ['columnar', 'secondary', 'buddy'])) {
+					$component = ucfirst($exploded[0]);
+				} elseif ($exploded[0] === 'knn') {
+					$component = 'KNN';
+				}
+
+				$versions[] = ['Component' => $component, 'Version' => $version];
+			}
+		}
+
+		return $versions;
 	}
 }
