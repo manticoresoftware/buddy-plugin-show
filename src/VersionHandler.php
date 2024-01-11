@@ -53,7 +53,7 @@ final class VersionHandler extends BaseHandlerWithClient
 	 * @param  mixed  $result
 	 * @return array<int<0, max>, array<string, string>>
 	 */
-	private function parseVersions(mixed $result):array {
+	private static function parseVersions(mixed $result):array {
 		$versions = [];
 		if (is_array($result) && isset($result[0]['data'][0]['Value'])) {
 			$value = $result[0]['data'][0]['Value'];
