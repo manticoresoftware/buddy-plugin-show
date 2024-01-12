@@ -138,6 +138,7 @@ class QueriesHandler extends BaseHandlerWithTableFormatter {
 		$data = [];
 		/** @var array<array{id:int,body:string,http:string,host:string}> $tasks */
 		$tasks = TaskPool::getList();
+		/** @var array{id:int,protocol:string,host:string,body:string} $task */
 		foreach ($tasks as $task) {
 			// ! same order as in COL_MAP
 			$data[] = [

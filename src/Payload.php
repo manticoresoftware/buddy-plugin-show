@@ -56,6 +56,7 @@ final class Payload extends BasePayload {
 			'full tables' => static::fromFullTablesRequest($request),
 			'create table' => static::fromCreateTableRequest($request),
 			'schemas', 'queries' => static::fromSimpleRequest($request),
+			'version' => static::fromVersionRequest($request),
 			'full columns' => static::fromColumnsRequest($request),
 			'unsupported' => static::fromUnsupportedStmtRequest($request),
 			default => throw new Exception('Failed to match type of request: ' . static::$type),
@@ -84,6 +85,16 @@ final class Payload extends BasePayload {
 		if ($m['like'] ?? '') {
 			$self->like = $m['like'];
 		}
+		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
+		return $self;
+	}
+
+	/**
+	 * @param Request $request
+	 * @return static
+	 */
+	protected static function fromVersionRequest(Request $request): static {
+		$self = new static();
 		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
 		return $self;
 	}
@@ -164,6 +175,12 @@ final class Payload extends BasePayload {
 			return true;
 		}
 
+		if ($payloadLen === 12 && stripos($request->payload, 'show version') === 0) {
+			static::$type = 'version';
+			return true;
+		}
+
+
 		if (stripos($request->payload, 'show create table') === 0) {
 			static::$type = 'create table';
 			return true;
@@ -225,6 +242,7 @@ final class Payload extends BasePayload {
 			'create table' => 'CreateTableHandler',
 			'schemas' => 'SchemasHandler',
 			'queries' => 'QueriesHandler',
+			'version' => 'VersionHandler',
 			'full columns' => 'FullColumnsHandler',
 			'unsupported' => 'UnsupportedStmtHandler',
 			default => throw new Exception('Cannot find handler for request type: ' . static::$type),
