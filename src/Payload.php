@@ -35,6 +35,9 @@ final class Payload extends BasePayload {
 	/** @var ?string $table */
 	public ?string $table = null;
 
+	/** @var string $query */
+	public string $query;
+
 	/**
 	 * @var string $like
 	 * 	It contains match pattern from LIKE statement if its presented
@@ -51,12 +54,11 @@ final class Payload extends BasePayload {
 	public static function fromRequest(Request $request): static {
 		return match (static::$type) {
 			'full tables' => static::fromFullTablesRequest($request),
-			'schemas' => static::fromSchemasRequest($request),
-			'queries' => static::fromQueriesRequest($request),
 			'create table' => static::fromCreateTableRequest($request),
+			'schemas', 'queries' => static::fromSimpleRequest($request),
 			'version' => static::fromVersionRequest($request),
-			'index', 'function status' => static::fromSimpleRequest($request),
 			'full columns' => static::fromColumnsRequest($request),
+			'unsupported' => static::fromUnsupportedStmtRequest($request),
 			default => throw new Exception('Failed to match type of request: ' . static::$type),
 		};
 	}
@@ -83,26 +85,6 @@ final class Payload extends BasePayload {
 		if ($m['like'] ?? '') {
 			$self->like = $m['like'];
 		}
-		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
-		return $self;
-	}
-
-	/**
-	 * @param Request $request
-	 * @return static
-	 */
-	protected static function fromSchemasRequest(Request $request): static {
-		$self = new static();
-		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
-		return $self;
-	}
-
-	/**
-	 * @param Request $request
-	 * @return static
-	 */
-	protected static function fromQueriesRequest(Request $request): static {
-		$self = new static();
 		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
 		return $self;
 	}
@@ -143,6 +125,17 @@ final class Payload extends BasePayload {
 	protected static function fromSimpleRequest(Request $request): static {
 		$self = new static();
 		[$self->path, $self->hasCliEndpoint] = self::getEndpointInfo($request);
+		return $self;
+	}
+
+	/**
+	 * @param Request $request
+	 * @return static
+	 */
+	protected static function fromUnsupportedStmtRequest(Request $request): static {
+		$self = new static();
+		[$self->path] = self::getEndpointInfo($request);
+		$self->query = $request->payload;
 		return $self;
 	}
 
@@ -198,18 +191,45 @@ final class Payload extends BasePayload {
 			return true;
 		}
 
-		if (stripos($request->payload, 'show index') === 0
-			|| stripos($request->payload, 'show keys') === 0) {
-			static::$type = 'index';
-			return true;
-		}
+// 		if (stripos($request->payload, 'show index') === 0
+// 			|| stripos($request->payload, 'show keys') === 0) {
+// 			static::$type = 'index';
+// 			return true;
+// 		}
 
-		if (stripos($request->payload, 'show function status') === 0
-		|| stripos($request->payload, 'show procedure status') === 0) {
-			static::$type = 'function status';
-			return true;
-		}
+// 		if (stripos($request->payload, 'show function status') === 0
+// 		|| stripos($request->payload, 'show procedure status') === 0) {
+// 			static::$type = 'function status';
+// 			return true;
+// 		}
 
+		$unsupportedStatements = [
+			'show tables from',
+			'show open tables from',
+			'show table status from',
+			'show function status',
+			'show procedure status',
+			'show triggers from',
+			'show events from',
+			'show session status',
+			'show character set',
+			'show charset',
+			'show variables',
+			'show engines',
+			'show create table',
+			'show full processlist',
+			'show privileges',
+			'show global status',
+			'show index',
+			'show keys',
+		];
+
+		foreach ($unsupportedStatements as $stmt) {
+			if (stripos($request->payload, $stmt) === 0) {
+				static::$type = 'unsupported';
+				return true;
+			}
+		}
 		return false;
 	}
 
@@ -223,9 +243,8 @@ final class Payload extends BasePayload {
 			'schemas' => 'SchemasHandler',
 			'queries' => 'QueriesHandler',
 			'version' => 'VersionHandler',
-			'index' => 'EmptyHandler',
-			'function status' => 'FunctionStatusHandler',
 			'full columns' => 'FullColumnsHandler',
+			'unsupported' => 'UnsupportedStmtHandler',
 			default => throw new Exception('Cannot find handler for request type: ' . static::$type),
 		};
 	}
